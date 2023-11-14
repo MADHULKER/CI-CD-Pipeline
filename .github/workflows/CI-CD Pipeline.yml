@@ -1,0 +1,87 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build
+      run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+
+    - name: Code quality checks
+      run: npm run lint
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    needs: test
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Deploy to staging
+      run: REMOTE_USER="your-ssh-username" REMOTE_HOST="your-ssh-host" REMOTE_PATH="/path/to/deployment"
+       ssh ${REMOTE_USER}@${REMOTE_HOST} "git clone https://github.com/your-username/your-repo.git ${REMOTE_PATH}" cd ${REMOTE_PATH} npm install pm2 stop your-app-name || true pm2 start index.js --name your-app-name echo "Deployment completed successfully."
+
+  notify:
+    runs-on: ubuntu-latest
+
+    needs: [build, test, deploy]
+
+    steps:
+    - name: Send notification on failure
+      if: failure()
+      run: 
+      notify:
+      runs-on: ubuntu-latest
+
+      needs: [build, test, deploy]
+      
+      steps:
+    - name: Send notification on failure
+      if: failure()
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: |
+        # Send a Slack notification
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"Build or deployment failed. :warning:"}' $SLACK_WEBHOOK_URL
+
+
+
